@@ -1,0 +1,502 @@
+.data
+	
+	header: .asciiz "\n          CS0447\n Bad Wine & Tipsy Spirits\n University of Pittsburgh\n"
+	w0: .asciiz "\nCabernet Sauvingon $15.00"
+	w1: .asciiz "\nMerlot             $12.00"
+	w2: .asciiz "\nSyrah               $7.00"
+	w3: .asciiz  "\nPinot Noir          $9.00"
+	w4: .asciiz  "\nMalbec             $11.00"
+	w5: .asciiz  "\nZinfandel           $8.00"
+	w6: .asciiz  "\nChardonnay         $10.00"
+	w7: .asciiz "\nSauvignon Blanc    $11.00"
+	w8: .asciiz "\nRiesling            $9.00"
+	total: .asciiz "\n\nTotal:"
+	money: .asciiz "\nCash:"
+	change: .asciiz "\nChange:"
+	blank: .asciiz " "
+	endBlank: .asciiz " "
+	totalDone: .asciiz ""
+	wines: .word w0, w1, w2, w3, w4, w5, w6, w7, w8		#array of labels for wines
+	prices: .word 15, 12, 7, 9, 11, 8, 10, 11, 9		#array of wine prices
+	
+.text
+
+addi $s0, $zero, 4294934528					#s0 - address of output display
+la $s1, wines							#s1 - address of wines
+la $s2, prices							#s2 - prices
+addi $s3, $zero, 0
+addi $s4, $zero, 0						#s4 - cash total
+start:
+	addi $s3, $zero, 0
+	addi $t8, $zero, 0
+	la $a0, header						#a0 -header
+	addi $a1, $s0, 0					#a1 - display
+			
+	jal _strCopy						#append header to display
+				
+	startLoop:		
+		beq $t9, 0, startLoop				#wait for user to hit wine buttonbutton
+		j displayAdd					#go to display once user hits a wine button
+		
+displayAdd:
+	addi $t0, $t9, -11					#subtract 11 from t9 and store in t0
+	sll $t0, $t0, 2
+	add $t1, $t0, $s1					#get address of wine to load by multiplying the index by 4 and adding it to address of wines
+	
+	add $t2, $t0, $s2					#get address of correct price
+	lw $t3, 0($t2)						#store price in t3
+	add $t8, $zero, $t3
+	add $s3, $s3, $t8
+	addi $a0, $s0, 0					#store address of buffer in s0
+	lw $a1, 0($t1)						#load label from index found into a1
+	
+	addi $sp, $sp, -16
+	sw $t0, 0($sp)
+	sw $t1, 4($sp)
+	sw $t2, 8($sp)
+	sw $t3, 12($sp)
+	
+	jal _strConcat						#append a1 to s0
+	
+	lw $t0, 0($sp)
+	lw $t1, 4($sp)
+	lw $t2, 8($sp)
+	lw $t3, 12($sp)
+	addi $sp, $sp, 16
+	
+	addi $t9, $zero, 0					#reset t9
+	
+	displayInputLoop:
+		beq $t9, 0, displayInputLoop			#wait for second input
+		beq $t9, 21, start 
+		beq $t9, 22, totalL
+		j displayAdd
+	
+	
+totalL:
+	addi $t8, $s3, 0
+	addi $a0, $s0, 0
+	la $a1, total
+	
+	addi $sp, $sp, -16
+	sw $t0, 0($sp)
+	sw $t1, 4($sp)
+	sw $t2, 8($sp)
+	sw $t3, 12($sp)
+	
+	jal _strConcat						#append total to end of buffer
+	
+	lw $t0, 0($sp)
+	lw $t1, 4($sp)
+	lw $t2, 8($sp)
+	lw $t3, 12($sp)
+	addi $sp, $sp, 16
+	
+	addi $a0, $s3, 0
+	
+	addi $sp, $sp, -16
+	sw $t0, 0($sp)
+	sw $t1, 4($sp)
+	sw $t2, 8($sp)
+	sw $t3, 12($sp)
+	
+	jal _getNumDigits
+	
+	lw $t0, 0($sp)
+	lw $t1, 4($sp)
+	lw $t2, 8($sp)
+	lw $t3, 12($sp)
+	addi $sp, $sp, 16
+	
+	addi $t0, $v0, 0					#get number of digits in s3
+	
+	addi $t0, $t0, 4					#add 4 to t0 b/c of $.00 digits
+	
+	addi $t1, $zero, 18					#digits left over after Total:
+	
+	sub $t2, $t1, $t0					#sub t0 from t1
+	addi $t2, $t2, 1
+	sll $t2, $t2, 1
+	addi $a0, $s0, 0					#set a0 to address of buffer
+	la $a1, blank						#set a1 to a space					
+	totalFormatLoop:
+		beq $t2, 0, totalFormatDone
+		addi $sp, $sp, -16
+		sw $t0, 0($sp)
+		sw $t1, 4($sp)
+		sw $t2, 8($sp)
+		sw $t3, 12($sp)
+		jal _strConcat	
+		lw $t0, 0($sp)
+		lw $t1, 4($sp)
+		lw $t2, 8($sp)
+		lw $t3, 12($sp)
+		addi $sp, $sp, 16				#append a space to the end of the buffer
+		addi $t2, $t2, -1				# increment copunter and loop
+		j totalFormatLoop
+		
+	totalFormatDone:
+		addi $a0, $s3, 0				#make s3 total
+		la $a1, totalDone				#set a1 to output buffer
+		
+		
+		
+		addi $sp, $sp, -16
+		sw $t0, 0($sp)
+		sw $t1, 4($sp)
+		sw $t2, 8($sp)
+		sw $t3, 12($sp)
+		
+		jal _numToPriceString				#get formatted string
+		
+		lw $t0, 0($sp)
+		lw $t1, 4($sp)
+		lw $t2, 8($sp)
+		lw $t3, 12($sp)
+		addi $sp, $sp, 16
+		
+		addi $a0, $s0, 0
+		la $a1, totalDone
+		
+		addi $sp, $sp, -16
+		sw $t0, 0($sp)
+		sw $t1, 4($sp)
+		sw $t2, 8($sp)
+		sw $t3, 12($sp)
+		
+		jal _strConcat	
+		
+		lw $t0, 0($sp)
+		lw $t1, 4($sp)
+		lw $t2, 8($sp)
+		lw $t3, 12($sp)
+		addi $sp, $sp, 16
+														#append formatted string to console	
+		addi $t9, $zero, 0
+		j totalLoop
+	
+	totalLoop:
+		beq $t9, 0, totalLoop			#wait for another input
+		beq $t9, 21, start 
+		j cash
+		
+
+cash:
+	add $t8, $zero, 0
+	cashLoop:
+		sll $t0, $t8, 1
+		sll $t1, $t8, 3
+		add $t8, $t0, $t1
+		add $t8, $t8, $t9
+		addi $t9, $zero, 0
+		cashLoopInner:
+			beq $t9, 0, cashLoopInner			#wait for another input
+			beq $t9, 21, start
+			beq $t9, 23, end
+			j cashLoop 
+	
+end:
+	
+	addi $a0, $s0, 0
+	la $a1, money
+	
+	addi $sp, $sp, -16
+	sw $t0, 0($sp)
+	sw $t1, 4($sp)
+	sw $t2, 8($sp)
+	sw $t3, 12($sp)
+	
+	jal _strConcat						#append cash to end of buffer
+	
+	lw $t0, 0($sp)
+	lw $t1, 4($sp)
+	lw $t2, 8($sp)
+	lw $t3, 12($sp)
+	addi $sp, $sp, 16
+	
+	addi $a0, $t8, 0
+	
+	addi $sp, $sp, -16
+	sw $t0, 0($sp)
+	sw $t1, 4($sp)
+	sw $t2, 8($sp)
+	sw $t3, 12($sp)
+	
+	jal _getNumDigits
+	
+	lw $t0, 0($sp)
+	lw $t1, 4($sp)
+	lw $t2, 8($sp)
+	lw $t3, 12($sp)
+	addi $sp, $sp, 16
+	
+	addi $t0, $v0, 0					#get number of digits in t8
+	
+	addi $t0, $t0, 4					#add 4 to t0 b/c of $.00 digits
+	
+	addi $t1, $zero, 18					#digits left over after Total:
+	
+	sub $t2, $t1, $t0					#sub t0 from t1
+	addi $t2, $t2, 1
+	sll $t2, $t2, 1
+	addi $a0, $s0, 0					#set a0 to address of buffer
+	la $a1, endBlank					#set a1 to a space					
+	endFormatLoop:
+		beq $t2, 0, endFormatDone
+		addi $sp, $sp, -16
+		sw $t0, 0($sp)
+		sw $t1, 4($sp)
+		sw $t2, 8($sp)
+		sw $t3, 12($sp)
+		jal _strConcat	
+		lw $t0, 0($sp)
+		lw $t1, 4($sp)
+		lw $t2, 8($sp)
+		lw $t3, 12($sp)
+		addi $sp, $sp, 16				#append a space to the end of the buffer
+		addi $t2, $t2, -1				# increment copunter and loop
+		j endFormatLoop
+		
+	endFormatDone:
+		addi $a0, $t8, 0				#make s3 total
+		la $a1, totalDone					#set a1 to output buffer
+		
+		addi $sp, $sp, -4
+		sw $s0, 0($sp)
+		
+		addi $sp, $sp, -16
+		sw $t0, 0($sp)
+		sw $t1, 4($sp)
+		sw $t2, 8($sp)
+		sw $t3, 12($sp)
+		
+		jal _numToPriceString				#get formatted string
+		
+		lw $t0, 0($sp)
+		lw $t1, 4($sp)
+		lw $t2, 8($sp)
+		lw $t3, 12($sp)
+		addi $sp, $sp, 16
+		
+		lw $s0, 0($sp)
+		addi $sp, $sp, 4
+		
+		addi $a0, $s0, 0
+		la $a1, totalDone
+		
+		addi $sp, $sp, -16
+		sw $t0, 0($sp)
+		sw $t1, 4($sp)
+		sw $t2, 8($sp)
+		sw $t3, 12($sp)
+		
+		jal _strConcat	
+		
+		lw $t0, 0($sp)
+		lw $t1, 4($sp)
+		lw $t2, 8($sp)
+		lw $t3, 12($sp)
+		addi $sp, $sp, 16
+										#append formatted string to console	
+		addi $t9, $zero, 0
+		j endLoop
+	
+	endLoop:
+		beq $t9, 0, endLoop			#wait for another input
+		addi $v0, $zero, 10
+		syscall
+
+
+
+
+
+
+
+
+
+
+
+
+
+#Copies a string into a seperate buffer
+#a0 - address of string to be copied
+#a1 - address of buffer
+_strCopy:
+	addi $t0, $a0, 0		#t0 - address of string to be copied
+	addi $t1, $a1, 0		#t1 - address of buffer to contain copy
+	addi $t2, $zero, 0		#t2 - temporary character being copied
+	copyLoop:
+		lb $t2, 0($t0)		#load byte from copy address to a temp
+		sb $t2, 0($t1)		#store byte into buffer address
+		beq $t2, 0, copyDone	#done if t1 is a null terminator
+		addi $t0, $t0, 1	#increment addresses
+		addi $t1, $t1, 1
+		j copyLoop
+	copyDone:
+		jr $ra				
+#concatenates 2 strings together
+#a0 - address of first string
+#a1 - address of second string	
+_strConcat:
+	addi $sp, $sp, -12	#push stack frame
+	sw $t0, 0($sp)
+	sw $t1, 4($sp)
+	sw $t2, 8($sp)
+	addi $t0, $a0, 0		#save arguments in t0 and t1
+	addi $t1, $a1, 0
+	addi $t2, $zero, 0		#t2 - temporary character
+	concatLoop:
+		lb $t2, 0($t0)		#load byte from t0 into t2
+		beq $t2, 0, concatDone	#if character is null, ready to concat
+		addi $t0, $t0, 1	#increment address
+		j concatLoop
+	concatDone:
+		addi $sp, $sp, -16	#push stack frame
+		sw $ra, 0($sp)		#save return address and temp vars
+		sw $t0, 4($sp)
+		sw $t1, 8($sp)
+		sw $t2, 12($sp)
+		add $a0, $zero, $a1	#make a0 address of string to "copy"
+		add $a1, $zero, $t0	#make a1 address of null terminator of first string
+		jal _strCopy
+		lw $ra, 0($sp)		#load return address and temp vars and pop stack frame
+		lw $t0, 4($sp)
+		lw $t1, 8($sp)
+		lw $t2, 12($sp)
+		addi $sp, $sp, 16
+		lw $t0, 0($sp)
+		lw $t1, 4($sp)
+		lw $t2, 8($sp)
+		addi $sp, $sp, 12
+		jr $ra
+						
+#divides a0 by 10
+#v0 - quotient
+#v1 - remainder
+_div10:
+	add $t0, $zero, 10		#make t0 10 so you can use div
+	div $t1, $a0, $t0		#execute div
+	mfhi $t2			#quotient and remainder are in hi and lo so move to t2 and t3 for access
+	mflo $t3			
+	add $v0, $zero, $t3		#store contents in return registers and jump return
+	add $v1, $zero, $t2
+	jr $ra
+#gets number of digits of a postitive integer a0
+#v0 - number of digits
+_getNumDigits:
+	
+	addi $t0, $zero, 0		#number in a0
+	add $t0, $zero, $a0	
+	addi $t1, $zero, 0		#quotient
+	addi $t2, $zero, 0		#remainder
+	addi $t3, $zero, 0		#counter - # digits
+	digitLoop:
+		addi $sp, $sp, -20
+		sw $ra, 0($sp)
+		sw $t0, 4($sp)
+		sw $t1, 8($sp)
+		sw $t2, 12($sp)
+		sw $t3, 16($sp)
+		jal _div10
+		lw $ra, 0($sp)
+		lw $t0, 4($sp)
+		lw $t1, 8($sp)
+		lw $t2, 12($sp)
+		lw $t3, 16($sp)
+		addi $sp, $sp, 20
+		addi $t3, $t3, 1	#increment counter
+		add $a0, $zero, $v0	#store quotient in a0
+		beq $a0, 0, digitDone	#done if no quotient
+		j digitLoop
+	digitDone:
+		add $v0, $zero, $t3
+		jr $ra
+#Converts positive int into a null terminated string
+#a0 - int
+#a1 - buffer of done string
+_numToPriceString:
+.data
+	endPrice: .asciiz ".00"
+.text
+	addi $sp, $sp, -4
+	sw $s0, 0($sp)
+	
+	addi $t0, $a0, 0			#t0 - int
+	addi $t1, $a1, 0			#t1 - address of buffer
+	addi $t2, $zero, 0			#t2 - temp address
+	addi $t3, $zero, 36			#t3 - temp character being added
+	sb $t3, 0($t1)				#put dollar sign at beginning
+	
+	addi $sp, $sp, -24		#store data and push stack
+	sw $ra, 0($sp)
+	sw $t0, 4($sp)
+	sw $t1, 8($sp)
+	sw $t2, 12($sp)
+	sw $t3, 16($sp)
+	sw $t4, 20($sp)
+	
+	jal _getNumDigits
+	
+	addi $t5, $v0, 0			#set t5 to numDigits
+	addi $s0, $t5, 0			#need for later
+	
+	lw $ra, 0($sp)
+	lw $t0, 4($sp)
+	lw $t1, 8($sp)
+	lw $t2, 12($sp)
+	lw $t3, 16($sp)
+	lw $t4, 20($sp)
+	addi $sp, $sp, 24		#load data and pop stack
+	
+	stringLoop:
+		beq $t5, 0, stringDone	#go to done if t5 is zero(all digits covered)
+		
+		addi $sp, $sp, -28		#store data and push stack
+		sw $ra, 0($sp)
+		sw $t0, 4($sp)
+		sw $t1, 8($sp)
+		sw $t2, 12($sp)
+		sw $t3, 16($sp)
+		sw $t4, 20($sp)
+		sw $t5, 24($sp)
+		
+		addi $a0, $t0, 0		#make a0 the int
+		jal _div10			#divide by 10
+		
+		lw $ra, 0($sp)
+		lw $t0, 4($sp)
+		lw $t1, 8($sp)
+		lw $t2, 12($sp)
+		lw $t3, 16($sp)
+		lw $t4, 20($sp)
+		lw $t5, 24($sp)
+		addi $sp, $sp, 28		#load data and pop stack
+		
+		addi $t0, $v0, 0		#make new int the quotient
+		addi $t3, $v1, 0		#t3 is remainder, last number in digits
+		addi $t3, $t3, 48		#convert t3 to ascii
+		addi $t2, $t1, 0		#set t2 to buffer address
+		add $t2, $t2, $t5		#add t5(Num digits left) to t2(address)
+		sb $t3, 0($t2)			#store t3 in the leftmost spot of buffer
+		addi $t5, $t5, -1		#decrement num digits left
+		j stringLoop
+		
+	stringDone:
+		addi $s0, $s0, 1
+		add $t1, $t1, $s0		#get address at end of string and set to a0
+		sb $zero, 0($t1)
+		addi $a0, $t1, 0
+		la $a1, endPrice			#set a1 to address of .00
+		
+		addi $sp, $sp, -4
+		sw $ra, 0($sp)
+		
+		jal _strConcat
+		
+		lw $ra, 0($sp)
+		addi $sp, $sp, 4
+		
+		lw $s0, 0($sp)
+		addi $sp, $sp, 4		
+								
+		jr $ra
